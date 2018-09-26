@@ -13,18 +13,14 @@ std::size_t GetNextComponentID()
 	return compID++;
 }
 
-template <typename T>
-std::size_t GetComponentID()
+template <typename T> std::size_t GetComponentID()
 {
 	static std::size_t id = GetNextComponentID();
 	return id;
 };
 
 //TODO naming
-template <typename... Ts>
-class UsedComponents
-{
-};
+template <typename... Ts> class UsedComponents { };
 
 class ComponentContainerBase
 {

@@ -1,6 +1,7 @@
 #pragma once
+#include <iostream>
+#include <array>
 #include <stack>
-#include <unordered_map>
 #include <vector>
 #include <bitset>
 #include <memory>
@@ -47,22 +48,23 @@ private:
 
 	EntityIndex _firstUsableEntityIndex = 0;
 	std::stack<EntityIndex> _freeEntityIndices;
-	std::unordered_map<ComponentID, ComponentContainerBase*> _containers;
-	std::unordered_map<EntityIndex, std::bitset<MAX_COMPONENT_COUNT>> _componentsByEntityIndex;
+
+	std::array<ComponentContainerBase*, MAX_COMPONENT_COUNT> _containers;
+	std::vector<std::bitset<MAX_COMPONENT_COUNT>> _componentsByEntityIndex;
 };
 
 template <typename T> T EntityManager::GetComponent(EntityIndex entity) const
 {
 	static ComponentID id = GetComponentID<T>();
 
-	const auto container = reinterpret_cast<ComponentContainer<T>*>(_containers.find(id)->second);
+	const auto container = reinterpret_cast<ComponentContainer<T>*>(_containers[id]);
 	return container->Get(entity);
 }
 
 template <typename T> bool EntityManager::HasComponent(EntityIndex entity) const
 {
 	static ComponentID id = GetComponentID<T>();
-	return _componentsByEntityIndex.find(entity)->second[id] == 1;
+	return _componentsByEntityIndex[entity][id] == 1;
 }
 
 template <typename T> void EntityManager::SetComponent(EntityIndex entity, T&& component)
@@ -76,6 +78,7 @@ template <typename T> void EntityManager::SetComponent(EntityIndex entity, T&& c
 
 template <typename... Ts> void EntityManager::SetupContainers()
 {
+	_containers.fill(nullptr);
 	auto _ = { (SetupContainer<Ts>(), 0)... };
 }
 
@@ -98,7 +101,7 @@ void EntityManager::CleanupContainers()
 {
 	for (auto& container : _containers)
 	{
-		delete container.second;
+		delete container;
 	}
 }
 
@@ -120,12 +123,15 @@ EntityIndex EntityManager::CreateEntity()
 
 void EntityManager::CreateContainersForNewEntity()
 {
-	for (auto& container : _containers)
+	for (auto container : _containers)
 	{
-		container.second->AddNew();
+		if (container != nullptr)
+		{
+			container->AddNew();
+		}
 	}
 
-	_componentsByEntityIndex[_firstUsableEntityIndex] = std::bitset<MAX_COMPONENT_COUNT>();
+	_componentsByEntityIndex.push_back(std::bitset<MAX_COMPONENT_COUNT>());
 }
 
 bool EntityManager::TryReuseEntityIndex(OUT EntityIndex& entityIndex)
