@@ -12,15 +12,27 @@ namespace ECSTest
 	public:
 		TEST_METHOD(EntityCountTest)
 		{
-			EntityManager manager;
+			UsedComponents<EntityState> usedComponents;
+
+			EntityManager manager(usedComponents);
 			Assert::IsTrue(manager.EntityCount() == 0, std::to_wstring(manager.EntityCount()).c_str());
 
 			auto entity = manager.CreateEntity();
 			Assert::IsTrue(manager.EntityCount() == 1);
 			Assert::IsTrue(entity == 0);
 			Assert::IsTrue(manager.HasComponent<EntityState>(entity));
+			Assert::IsTrue(manager.GetComponent<EntityState>(entity) == EntityState::Active);
 
-			// Then check for component 0: EntityState (active, destroyed, whatever)
+			auto other = manager.CreateEntity();
+			Assert::IsTrue(manager.EntityCount() == 2);
+			Assert::IsTrue(other == 1);
+
+			manager.DestroyEntity(entity);
+			Assert::IsTrue(manager.EntityCount() == 1);
+
+			entity = manager.CreateEntity();
+			Assert::IsTrue(manager.EntityCount() == 2);
+			Assert::IsTrue(entity == 0);
 		}
 	};
 }
