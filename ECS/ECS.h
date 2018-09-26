@@ -35,6 +35,7 @@ public:
 	template <typename T> bool HasComponent(EntityIndex entity) const;
 	template <typename T> void SetComponent(EntityIndex entity, T&& component);
 	template <typename T> T GetComponent(EntityIndex entity) const;
+	template <typename ... Ts> EntityIndex CreateEntityWithComponents(Ts... components);
 
 private:
 	bool TryReuseEntityIndex(OUT EntityIndex& entityIndex);
@@ -53,7 +54,8 @@ private:
 template <typename T> T EntityManager::GetComponent(EntityIndex entity) const
 {
 	static ComponentID id = GetComponentID<T>();
-	static const auto container = reinterpret_cast<ComponentContainer<T>*>(_containers.find(id)->second);
+
+	const auto container = reinterpret_cast<ComponentContainer<T>*>(_containers.find(id)->second);
 	return container->Get(entity);
 }
 
@@ -66,8 +68,8 @@ template <typename T> bool EntityManager::HasComponent(EntityIndex entity) const
 template <typename T> void EntityManager::SetComponent(EntityIndex entity, T&& component)
 {
 	static ComponentID id = GetComponentID<T>();
-	static auto container = reinterpret_cast<ComponentContainer<T>*>(_containers[id]);
-
+	
+	auto container = reinterpret_cast<ComponentContainer<T>*>(_containers[id]);
 	_componentsByEntityIndex[entity].set(id, true);
 	container->Set(entity, std::forward<T>(component));
 }
@@ -81,6 +83,15 @@ template <typename T> void EntityManager::SetupContainer()
 {
 	auto id = GetComponentID<T>();
 	_containers[id] = new ComponentContainer<T>();
+}
+
+template <typename... Ts> EntityIndex EntityManager::CreateEntityWithComponents(Ts... components)
+{
+	auto entity = CreateEntity();
+
+	auto _ = { (SetComponent<Ts>(entity, std::forward<Ts>(components)), 0)... };
+
+	return entity;
 }
 
 void EntityManager::CleanupContainers()
@@ -97,8 +108,7 @@ EntityIndex EntityManager::CreateEntity()
 
 	if (TryReuseEntityIndex(OUT newEntity))
 	{
-		//TODO
-		//SetComponent<EntityState>(newEntity, EntityState::active);
+		SetComponent<EntityState>(newEntity, EntityState::Active);
 		return newEntity;
 	}
 
