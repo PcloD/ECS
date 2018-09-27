@@ -111,6 +111,7 @@ EntityIndex EntityManager::CreateEntity()
 
 	if (TryReuseEntityIndex(OUT newEntity))
 	{
+		_componentsByEntityIndex[newEntity].reset();
 		SetComponent<EntityState>(newEntity, EntityState::Active);
 		return newEntity;
 	}
