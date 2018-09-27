@@ -1,5 +1,8 @@
-#include <string>
 #include "stdafx.h"
+
+#include <string>
+#include <iostream>
+#include <chrono>
 #include "CppUnitTest.h"
 #include "../ECS/ECS.h"
 
@@ -7,6 +10,11 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace ECSTest
 {
+	struct TestComponent
+	{
+		float x, y, z;
+	};
+
 	TEST_CLASS(UnitTest01)
 	{
 	public:
@@ -97,6 +105,56 @@ namespace ECSTest
 			Assert::IsTrue(manager.HasComponent<IntVec>(first));
 			Assert::IsFalse(manager.HasComponent<float>(first));
 			Assert::IsFalse(manager.HasComponent<int>(first));
+		}
+
+		TEST_METHOD(GetEntitiesForComponents)
+		{
+			//TODO: _always_ have EntityState, even if not explicitly specified
+			UsedComponents<EntityState, int, TestComponent> usedComponents;
+			EntityManager manager(usedComponents);
+			Assert::IsTrue(manager.EntityCount() == 0);
+
+			auto start = std::chrono::high_resolution_clock::now();
+
+			for (int i = 0; i < 1000; ++i)
+			{
+				if (i % 2 == 0)
+				{
+					manager.CreateEntityWithComponents<int, TestComponent>(i, TestComponent{});
+				}
+				else
+				{
+					manager.CreateEntityWithComponents<int>(i);
+				}
+			}
+
+			auto end = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double> elapsed = end - start;
+			std::string msg = "Creation: " + std::to_string(elapsed.count());
+			Logger::WriteMessage(msg.c_str());
+
+			Assert::IsTrue(manager.EntityCount() == 1000);
+
+			//TODO: Extract this nicely
+			std::bitset<MAX_COMPONENT_COUNT> filter;
+
+			filter.reset();
+			filter.set(GetComponentID<int>(), true);
+			filter.set(GetComponentID<TestComponent>(), true);
+			
+			std::vector<EntityIndex> entities;
+
+			start = std::chrono::high_resolution_clock::now();
+
+			manager.GetEntities(filter, OUT entities);
+
+			end = std::chrono::high_resolution_clock::now();
+			elapsed = end - start;
+
+			msg = "\nFiltering: " + std::to_string(elapsed.count());
+			Logger::WriteMessage(msg.c_str());
+
+			Assert::IsTrue(entities.size() == 500, std::to_wstring(entities.size()).c_str());
 		}
 	};
 }

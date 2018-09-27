@@ -37,6 +37,9 @@ public:
 	template <typename T> void SetComponent(EntityIndex entity, T&& component);
 	template <typename T> T GetComponent(EntityIndex entity) const;
 	template <typename ... Ts> EntityIndex CreateEntityWithComponents(Ts... components);
+	
+	void GetEntities(const std::bitset<MAX_COMPONENT_COUNT>& filter,
+					 OUT std::vector<EntityIndex>& entities) const;
 
 private:
 	bool TryReuseEntityIndex(OUT EntityIndex& entityIndex);
@@ -52,6 +55,18 @@ private:
 	std::array<ComponentContainerBase*, MAX_COMPONENT_COUNT> _containers;
 	std::vector<std::bitset<MAX_COMPONENT_COUNT>> _componentsByEntityIndex;
 };
+
+void EntityManager::GetEntities(const std::bitset<MAX_COMPONENT_COUNT>& filter,
+								std::vector<EntityIndex>& entities) const
+{
+	for (EntityIndex i = 0; i < _firstUsableEntityIndex; ++i)
+	{
+		if ((_componentsByEntityIndex[i] & filter) == filter)
+		{
+			entities.push_back(i);
+		}
+	}
+}
 
 template <typename T> T EntityManager::GetComponent(EntityIndex entity) const
 {
@@ -111,7 +126,6 @@ EntityIndex EntityManager::CreateEntity()
 
 	if (TryReuseEntityIndex(OUT newEntity))
 	{
-		_componentsByEntityIndex[newEntity].reset();
 		SetComponent<EntityState>(newEntity, EntityState::Active);
 		return newEntity;
 	}
@@ -149,6 +163,7 @@ bool EntityManager::TryReuseEntityIndex(OUT EntityIndex& entityIndex)
 
 void EntityManager::DestroyEntity(EntityIndex index)
 {
+	_componentsByEntityIndex[index].reset();
 	SetComponent<EntityState>(index, EntityState::Destroyed);
 	_freeEntityIndices.push(index);
 }
