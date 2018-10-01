@@ -14,6 +14,7 @@ constexpr std::size_t MAX_COMPONENT_COUNT = 32;
 
 using EntityIndex = std::size_t;
 using ComponentID = std::size_t;
+using EntityFilter = std::bitset<MAX_COMPONENT_COUNT>;
 
 class EntityManager
 {
@@ -37,6 +38,7 @@ public:
 	template <typename T> void SetComponent(EntityIndex entity, T&& component);
 	template <typename T> T GetComponent(EntityIndex entity) const;
 	template <typename ... Ts> EntityIndex CreateEntityWithComponents(Ts... components);
+	template <typename T> ComponentContainer<T>* GetContainer() const;
 	
 	void GetEntities(const std::bitset<MAX_COMPONENT_COUNT>& filter,
 					 OUT std::vector<EntityIndex>& entities) const;
@@ -56,9 +58,17 @@ private:
 	std::vector<std::bitset<MAX_COMPONENT_COUNT>> _componentsByEntityIndex;
 };
 
+template<typename T> ComponentContainer<T>* EntityManager::GetContainer() const
+{
+	static ComponentID id = GetComponentID<T>();
+	return reinterpret_cast<ComponentContainer<T>*>(_containers[id]);
+}
+
 void EntityManager::GetEntities(const std::bitset<MAX_COMPONENT_COUNT>& filter,
 								std::vector<EntityIndex>& entities) const
 {
+	entities.clear();
+
 	for (EntityIndex i = 0; i < _firstUsableEntityIndex; ++i)
 	{
 		if ((_componentsByEntityIndex[i] & filter) == filter)
@@ -70,9 +80,7 @@ void EntityManager::GetEntities(const std::bitset<MAX_COMPONENT_COUNT>& filter,
 
 template <typename T> T EntityManager::GetComponent(EntityIndex entity) const
 {
-	static ComponentID id = GetComponentID<T>();
-
-	const auto container = reinterpret_cast<ComponentContainer<T>*>(_containers[id]);
+	auto container = GetContainer<T>();
 	return container->Get(entity);
 }
 
@@ -164,6 +172,5 @@ bool EntityManager::TryReuseEntityIndex(OUT EntityIndex& entityIndex)
 void EntityManager::DestroyEntity(EntityIndex index)
 {
 	_componentsByEntityIndex[index].reset();
-	SetComponent<EntityState>(index, EntityState::Destroyed);
 	_freeEntityIndices.push(index);
 }
