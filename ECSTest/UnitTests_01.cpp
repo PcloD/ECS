@@ -44,6 +44,16 @@ namespace ECSTest
 		return Position{ a.x + b.x, a.y + b.y, a.z + b.z };
 	}
 
+	struct BaseComponent
+	{
+		int someValue;
+	};
+
+	struct DerivedComponent : public BaseComponent
+	{
+		int otherValue;
+	};
+
 	TEST_CLASS(UnitTest01)
 	{
 	public:
@@ -431,7 +441,34 @@ namespace ECSTest
 			Assert::IsTrue(entities.size() == 50);
 		}
 
-		//TODO: Components that inherit from one another?
+		TEST_METHOD(ComponentsThatInherit)
+		{
+			UsedComponents<EntityState, BaseComponent, DerivedComponent> usedComponents;
+			EntityManager manager(usedComponents);
+
+			auto onlyBase = manager.CreateEntityWithComponents<BaseComponent>(std::move(BaseComponent()));
+			auto onlyDerived = manager.CreateEntityWithComponents<DerivedComponent>(std::move(DerivedComponent()));
+			auto both = manager.CreateEntityWithComponents<BaseComponent, DerivedComponent>
+									(std::move(BaseComponent()), std::move(DerivedComponent()));
+
+			Assert::IsTrue(manager.EntityCount() == 3);
+
+			EntityFilter filter;
+			filter.set(GetComponentID<EntityState>(), true);
+			filter.set(GetComponentID<BaseComponent>(), true);
+			std::vector<EntityIndex> entities;
+
+			manager.GetEntities(filter, OUT entities);
+			Assert::IsTrue(entities.size() == 2);		// should find onlyBase and both
+
+			filter.set(GetComponentID<DerivedComponent>(), true);
+			manager.GetEntities(filter, OUT entities);
+			Assert::IsTrue(entities.size() == 1);		// should find both
+
+			filter.set(GetComponentID<BaseComponent>(), false);
+			manager.GetEntities(filter, OUT entities);
+			Assert::IsTrue(entities.size() == 2);		// should find onlyDerived and both
+		}
 
 	private:
 		void Measure(std::function<void()> func, const std::string& name)
