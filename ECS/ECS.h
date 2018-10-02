@@ -38,7 +38,7 @@ public:
 	template <typename T> void SetComponent(EntityIndex entity, T&& component);
 	template <typename T> T GetComponent(EntityIndex entity) const;
 	template <typename ... Ts> EntityIndex CreateEntityWithComponents(Ts... components);
-	template <typename T> ComponentContainer<T>* GetContainer() const;
+	template <typename T> ComponentContainer<T>& GetContainer() const;
 	
 	void GetEntities(const std::bitset<MAX_COMPONENT_COUNT>& filter,
 					 OUT std::vector<EntityIndex>& entities) const;
@@ -58,10 +58,11 @@ private:
 	std::vector<std::bitset<MAX_COMPONENT_COUNT>> _componentsByEntityIndex;
 };
 
-template<typename T> ComponentContainer<T>* EntityManager::GetContainer() const
+template<typename T> ComponentContainer<T>& EntityManager::GetContainer() const
 {
 	static ComponentID id = GetComponentID<T>();
-	return reinterpret_cast<ComponentContainer<T>*>(_containers[id]);
+	auto ptr = reinterpret_cast<ComponentContainer<T>*>(_containers[id]);
+	return *ptr;
 }
 
 void EntityManager::GetEntities(const std::bitset<MAX_COMPONENT_COUNT>& filter,
@@ -81,7 +82,7 @@ void EntityManager::GetEntities(const std::bitset<MAX_COMPONENT_COUNT>& filter,
 template <typename T> T EntityManager::GetComponent(EntityIndex entity) const
 {
 	auto container = GetContainer<T>();
-	return container->Get(entity);
+	return container.Get(entity);
 }
 
 template <typename T> bool EntityManager::HasComponent(EntityIndex entity) const

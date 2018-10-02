@@ -246,14 +246,14 @@ namespace ECSTest
 
 			manager.GetEntities(filter, OUT entities);
 
-			auto intContainer = manager.GetContainer<int>();
+			auto& intContainer = manager.GetContainer<int>();
 
 			std::function<void()> setEntities = [&]
 			{
 				for (const auto& entity : entities)
 				{
-					auto current = intContainer->Get(entity);
-					intContainer->Set(entity, current + 1);
+					auto current = intContainer.Get(entity);
+					intContainer.Set(entity, current + 1);
 				}
 			};
 
@@ -284,15 +284,15 @@ namespace ECSTest
 
 			manager.GetEntities(filter, OUT entities);
 
-			auto intContainer = manager.GetContainer<int>();
+			auto& intContainer = manager.GetContainer<int>();
 
 			auto increment = [&](std::size_t from, std::size_t until)
 			{
 				for (std::size_t i = from; i < until; ++i)
 				{
 					auto entity = entities[i];
-					auto current = intContainer->Get(entity);
-					intContainer->Set(entity, current + 1);
+					auto current = intContainer.Get(entity);
+					intContainer.Set(entity, current + 1);
 				}
 			};
 
@@ -333,15 +333,15 @@ namespace ECSTest
 			std::vector<EntityIndex> entities;
 			manager.GetEntities(filter, OUT entities);
 			
-			auto posContainer = manager.GetContainer<Position>();
-			auto velContainer = manager.GetContainer<Velocity>();
+			auto& posContainer = manager.GetContainer<Position>();
+			auto& velContainer = manager.GetContainer<Velocity>();
 
 			auto update = [&](std::size_t from, std::size_t to, float deltaT)
 			{
 				for (std::size_t i = from; i < to; ++i)
 				{
-					auto current = posContainer->Get(i);
-					posContainer->Set(i, current + (velContainer->Get(i) * deltaT));
+					auto current = posContainer.Get(i);
+					posContainer.Set(i, current + (velContainer.Get(i) * deltaT));
 				}
 			};
 
