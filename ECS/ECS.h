@@ -36,6 +36,7 @@ public:
 
 	template <typename T> bool HasComponent(EntityIndex entity) const;
 	template <typename T> void SetComponent(EntityIndex entity, T&& component);
+	template <typename T> void RemoveComponent(EntityIndex entity);
 	template <typename T> T GetComponent(EntityIndex entity) const;
 	template <typename ... Ts> EntityIndex CreateEntityWithComponents(Ts... components);
 	template <typename T> ComponentContainer<T>& GetContainer() const;
@@ -89,6 +90,12 @@ template <typename T> bool EntityManager::HasComponent(EntityIndex entity) const
 {
 	static ComponentID id = GetComponentID<T>();
 	return _componentsByEntityIndex[entity][id] == 1;
+}
+
+template <typename T> void EntityManager::RemoveComponent(EntityIndex entity)
+{
+	static ComponentID id = GetComponentID<T>();
+	_componentsByEntityIndex[entity][id] = 0;
 }
 
 template <typename T> void EntityManager::SetComponent(EntityIndex entity, T&& component)

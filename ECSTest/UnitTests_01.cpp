@@ -365,6 +365,74 @@ namespace ECSTest
 			}
 		}
 
+		TEST_METHOD(AddComponents)
+		{
+			UsedComponents<EntityState, int, float, Position> usedComponents;
+			EntityManager manager(usedComponents);
+
+			for (int i = 0; i < 100; ++i)
+			{
+				manager.CreateEntity();
+			}
+
+			Assert::IsTrue(manager.EntityCount() == 100);
+
+			EntityFilter filter;
+			filter.set(GetComponentID<EntityState>(), true);
+			std::vector<EntityIndex> entities;
+			manager.GetEntities(filter, OUT entities);
+			Assert::IsTrue(entities.size() == 100);
+
+			filter.set(GetComponentID<Position>(), true);
+			manager.GetEntities(filter, OUT entities);
+			Assert::IsTrue(entities.size() == 0);
+
+			for (std::size_t i = 0; i < 100; ++i)
+			{
+				if (i % 2 == 0)
+				{
+					manager.SetComponent(i, std::move(Position(0.0f, 0.0f, 0.0f)));
+				}
+			}
+
+			manager.GetEntities(filter, OUT entities);
+			Assert::IsTrue(entities.size() == 50);
+		}
+
+		TEST_METHOD(RemoveComponents)
+		{
+			UsedComponents<EntityState, int, float, Position> usedComponents;
+			EntityManager manager(usedComponents);
+
+			for (int i = 0; i < 100; ++i)
+			{
+				manager.CreateEntityWithComponents<int, float>(i, 99.231f);
+			}
+
+			Assert::IsTrue(manager.EntityCount() == 100);
+			EntityFilter filter;
+			filter.set(GetComponentID<EntityState>(), true);
+			filter.set(GetComponentID<int>(), true);
+			filter.set(GetComponentID<float>(), true);
+			std::vector<EntityIndex> entities;
+
+			manager.GetEntities(filter, OUT entities);
+			Assert::IsTrue(entities.size() == 100);
+
+			for (std::size_t i = 0; i < 100; ++i)
+			{
+				if (i % 2 == 0)
+				{
+					manager.RemoveComponent<int>(i);
+				}
+			}
+
+			manager.GetEntities(filter, OUT entities);
+			Assert::IsTrue(entities.size() == 50);
+		}
+
+		//TODO: Components that inherit from one another?
+
 	private:
 		void Measure(std::function<void()> func, const std::string& name)
 		{
