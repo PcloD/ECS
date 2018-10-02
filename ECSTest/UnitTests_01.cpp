@@ -20,6 +20,30 @@ namespace ECSTest
 		float x, y, z;
 	};
 
+	struct Position
+	{
+		Position() = default;
+		Position(float px, float py, float pz) : x{ px }, y{ py }, z{ pz } {}
+		float x, y, z;
+	};
+
+	struct Velocity
+	{
+		Velocity() : x{ 0.0f }, y{ 0.0f }, z{ 0.0f } {};
+		Velocity(float vx, float vy, float vz) : x{ vx }, y{ vy }, z{ vz } {}
+		float x, y, z;
+	};
+
+	Position operator*(const Velocity& velocity, float scalar)
+	{
+		return Position{ velocity.x * scalar, velocity.y * scalar, velocity.z * scalar };
+	}
+
+	Position operator+(const Position& a, const Position& b)
+	{
+		return Position{ a.x + b.x, a.y + b.y, a.z + b.z };
+	}
+
 	TEST_CLASS(UnitTest01)
 	{
 	public:
@@ -262,9 +286,9 @@ namespace ECSTest
 
 			auto intContainer = manager.GetContainer<int>();
 
-			auto increment = [&](EntityIndex from, EntityIndex until)
+			auto increment = [&](std::size_t from, std::size_t until)
 			{
-				for (EntityIndex i = from; i < until; ++i)
+				for (std::size_t i = from; i < until; ++i)
 				{
 					auto entity = entities[i];
 					auto current = intContainer->Get(entity);
@@ -287,6 +311,57 @@ namespace ECSTest
 			for (int i = 0; i < MANY; ++i)
 			{
 				Assert::IsTrue(manager.GetComponent<int>(entities[i]) == i + 1);
+			}
+		}
+
+		TEST_METHOD(DoSomeParallelUpdates)
+		{
+			UsedComponents<EntityState, Position, Velocity> usedComponents;
+			EntityManager manager(usedComponents);
+
+			for (int i = 0; i < MANY; ++i)
+			{
+				manager.CreateEntityWithComponents<Position, Velocity>(Position(i * 1.0f, i * 0.5f, -i * 3.0f),
+																	   Velocity(i * 0.1f, -i * 0.2f, 0.0f));
+			}
+
+			Assert::IsTrue(manager.EntityCount() == MANY);
+
+			EntityFilter filter;
+			filter.set(GetComponentID<Position>(), true);
+			filter.set(GetComponentID<Velocity>(), true);
+			std::vector<EntityIndex> entities;
+			manager.GetEntities(filter, OUT entities);
+			
+			auto posContainer = manager.GetContainer<Position>();
+			auto velContainer = manager.GetContainer<Velocity>();
+
+			auto update = [&](std::size_t from, std::size_t to, float deltaT)
+			{
+				for (std::size_t i = from; i < to; ++i)
+				{
+					auto current = posContainer->Get(i);
+					posContainer->Set(i, current + (velContainer->Get(i) * deltaT));
+				}
+			};
+
+			std::function<void()> doUpdate = [&]
+			{
+				auto size = entities.size();
+				auto deltaT = 0.16f;
+
+				auto future1 = std::async(std::launch::async, update, 0, size / 2, deltaT);
+				auto future2 = std::async(std::launch::async, update, size / 2, size, deltaT);
+
+				future1.get();
+				future2.get();
+			};
+
+			Measure(doUpdate, "Parallel update of position by deltaT * velocity: ");
+
+			for (int i = 1; i < MANY; ++i)
+			{
+				Assert::IsTrue(manager.GetComponent<Position>(entities[i]).x > i);
 			}
 		}
 

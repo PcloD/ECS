@@ -111,6 +111,11 @@ template <typename T> void EntityManager::SetupContainer()
 	_containers[id] = new ComponentContainer<T>();
 }
 
+//TODO: Forward components to CreateEntity;
+//		otherwise it's a bit stupid to create new default component and
+//		then override it - although it actually does make sense,
+//		because in this multi-array setup, many items will be unused and
+//		thus empty. So they _should_ have the default value.
 template <typename... Ts> EntityIndex EntityManager::CreateEntityWithComponents(Ts... components)
 {
 	auto entity = CreateEntity();
